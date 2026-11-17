@@ -112,6 +112,51 @@
             opacity: 1;
             transform: translateY(0);
         }
+
+
+        /* Animasi masuk yang konsisten untuk setiap halaman, seperti kartu buku di Beranda */
+        @keyframes pageRevealIn {
+            from { opacity: 0; transform: translateY(22px) scale(.985); filter: blur(2px); }
+            to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+        }
+        @keyframes cardRevealIn {
+            from { opacity: 0; transform: translateY(26px) scale(.97); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .page-reveal-item { animation: pageRevealIn .68s cubic-bezier(.2,.75,.25,1) both; }
+        .card-reveal-item { animation: cardRevealIn .62s cubic-bezier(.2,.75,.25,1) both; }
+        /* Reveal saat scroll: elemen muncul bertahap dan berulang saat digulir naik/turun */
+        .scroll-reveal-item {
+            opacity: 0;
+            transform: translateY(34px) scale(.985);
+            filter: blur(2px);
+            transition: opacity .7s ease, transform .7s cubic-bezier(.16,1,.3,1), filter .7s ease;
+            will-change: opacity, transform;
+        }
+        .scroll-reveal-item.is-scroll-visible {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            filter: blur(0);
+        }
+        /* Kartu katalog dan promo muncul perlahan saat masuk viewport,
+           lalu diulang ketika pengguna menggulir naik maupun turun. */
+        .catalog-scroll-reveal {
+            opacity:  0;
+            transform: translateY(34px) scale(.985);
+            filter: blur(2px);
+            transition: opacity .78s ease, transform .78s cubic-bezier(.16,1,.3,1), filter .78s ease;
+            will-change: opacity, transform;
+        }
+        .catalog-scroll-reveal.is-catalog-visible {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            filter: blur(0);
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .page-reveal-item, .card-reveal-item { animation: none !important; }
+            .zoom-out-card, .timeline-fade-item { transition: none !important; }
+            .scroll-reveal-item { opacity: 1; transform: none; filter: none; transition: none; }
+        }
     </style>
 </head>
 <body class="bg-[#faf8f5] text-slate-800 dark:bg-slatebrand-950 dark:text-slate-100 transition-colors duration-300 min-h-screen flex flex-col pb-20 md:pb-0">
@@ -417,7 +462,7 @@
             </section>
 
             <!-- 1.4 PENCARIAN CEPAT & GRID BUKU PILIHAN BERANDA -->
-            <section class="space-y-6 bg-white dark:bg-slatebrand-900 p-6 sm:p-8 rounded-3xl border border-stone-200 dark:border-slate-800 shadow-sm">
+            <section id="home-exploration-section" class="space-y-6 bg-white dark:bg-slatebrand-900 p-6 sm:p-8 rounded-3xl border border-stone-200 dark:border-slate-800 shadow-sm">
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
                         <h3 class="font-display text-xl sm:text-2xl font-extrabold">Eksplorasi Koleksi Cepat</h3>
@@ -434,7 +479,7 @@
             </section>
 
             <!-- 1.5 RINGKASAN PROFIL & ALAMAT PERPUSTAKAAN DI BERANDA -->
-            <section class="rounded-3xl bg-stone-100 dark:bg-slatebrand-900/70 border border-stone-200 dark:border-slate-800 p-6 sm:p-8 grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
+            <section id="home-about-section" class="rounded-3xl bg-stone-100 dark:bg-slatebrand-900/70 border border-stone-200 dark:border-slate-800 p-6 sm:p-8 grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
                 <div class="lg:col-span-2 space-y-3">
                     <span class="px-3 py-1 rounded-full bg-terracotta-100 dark:bg-terracotta-900/40 text-terracotta-700 dark:text-terracotta-300 text-xs font-bold">Tentang e-perpus wordie</span>
                     <h3 class="font-display text-2xl font-extrabold">Menghubungkan Pembaca dengan Pengetahuan Sejak 2021</h3>
@@ -734,6 +779,43 @@
         <!-- HALAMAN 4: AKUN PEMINJAM (KHUSUS PEMINJAM / ANGGOTA)                  -->
         <!-- ===================================================================== -->
         <div id="page-akun" class="page-view hidden space-y-8">
+            <!-- Login / Register Peminjam (tambahan; bagian lain tidak diubah) -->
+            <section id="borrower-auth-panel" class="max-w-xl mx-auto bg-white dark:bg-slatebrand-900 p-6 sm:p-8 rounded-3xl border border-stone-200 dark:border-slate-800 shadow-sm">
+                <div class="text-center mb-6">
+                    <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-terracotta-500 to-amber-500 text-white flex items-center justify-center shadow-lg"><i data-lucide="user-round" class="w-7 h-7"></i></div>
+                    <h2 id="borrower-auth-title" class="font-display text-2xl font-extrabold mt-4">Login Peminjam</h2>
+                    <p id="borrower-auth-subtitle" class="text-sm text-slate-500 dark:text-slate-400 mt-1">Masuk untuk melihat akun dan riwayat peminjamanmu.</p>
+                </div>
+                <form id="borrower-auth-form" onsubmit="handleBorrowerAuth(event)" class="space-y-4">
+                    <div id="borrower-name-field" class="hidden space-y-3">
+                        <div>
+                            <label class="block text-xs font-semibold mb-1">Nama Lengkap *</label>
+                            <input id="borrower-auth-name" type="text" autocomplete="name" class="w-full px-3.5 py-3 rounded-xl bg-stone-100 dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-terracotta-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold mb-1">Nomor WhatsApp / HP *</label>
+                            <input id="borrower-auth-phone" type="tel" autocomplete="tel" placeholder="08xxxxxxxxxx" class="w-full px-3.5 py-3 rounded-xl bg-stone-100 dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-terracotta-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold mb-1">Alamat Lengkap *</label>
+                            <textarea id="borrower-auth-address" rows="2" autocomplete="street-address" placeholder="Jalan, RT/RW, kelurahan, kecamatan, kota" class="w-full px-3.5 py-3 rounded-xl bg-stone-100 dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-terracotta-500"></textarea>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Email</label>
+                        <input id="borrower-auth-email" type="email" required autocomplete="email" class="w-full px-3.5 py-3 rounded-xl bg-stone-100 dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-terracotta-500" placeholder="nama@email.com">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Kata Sandi</label>
+                        <input id="borrower-auth-password" type="password" required minlength="6" autocomplete="current-password" class="w-full px-3.5 py-3 rounded-xl bg-stone-100 dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-terracotta-500" placeholder="Minimal 6 karakter">
+                    </div>
+                    <button id="borrower-auth-submit" type="submit" class="w-full py-3 rounded-xl bg-terracotta-600 hover:bg-terracotta-700 text-white font-bold text-sm shadow-md">Masuk</button>
+                </form>
+                <p class="text-center text-sm text-slate-500 mt-5"><span id="borrower-auth-switch-label">Belum punya akun?</span>
+                    <button id="borrower-auth-switch" type="button" onclick="toggleBorrowerAuthMode()" class="font-bold text-terracotta-600 hover:underline">Daftar sekarang</button>
+                </p>
+            </section>
+            <div id="borrower-dashboard" class="hidden space-y-8">
             <div class="bg-white dark:bg-slatebrand-900 p-6 sm:p-8 rounded-3xl border border-stone-200 dark:border-slate-800 shadow-sm">
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div class="flex items-center gap-4">
@@ -749,9 +831,14 @@
                             <p id="display-user-email" class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">raka.wijaya@wordie.id • Bekasi Timur</p>
                         </div>
                     </div>
+                    <div class="flex flex-wrap gap-2">
+                    <button onclick="handleBorrowerLogout()" class="self-start px-4 py-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-300 text-xs font-bold flex items-center gap-2 transition">
+                        <i data-lucide="log-out" class="w-4 h-4"></i> Logout
+                    </button>
                     <button onclick="toggleEditProfileForm()" class="self-start md:self-auto px-4 py-2.5 rounded-xl bg-stone-100 dark:bg-slate-800 hover:bg-stone-200 dark:hover:bg-slate-700 text-xs font-bold flex items-center gap-2 transition">
                         <i data-lucide="user-cog" class="w-4 h-4"></i> Edit Data Peminjam
                     </button>
+                    </div>
                 </div>
 
                 <!-- Form Edit Profil Peminjam -->
@@ -793,6 +880,7 @@
                     <span class="px-2.5 py-0.5 rounded-full bg-amber-200/60 dark:bg-amber-900/60 text-[11px] font-extrabold">Tarif Tetap Rp 5.000</span>
                 </div>
                 <div id="loans-tracking-list" class="space-y-4"></div>
+            </div>
             </div>
         </div>
 
@@ -954,6 +1042,14 @@
                         <label class="block text-xs font-semibold mb-1">Nama Peminjam *</label>
                         <input type="text" id="loan-borrower-name" required class="w-full px-3.5 py-2.5 rounded-xl bg-stone-100 dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-terracotta-500">
                     </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Email Akun</label>
+                        <input type="email" id="loan-borrower-email" readonly class="w-full px-3.5 py-2.5 rounded-xl bg-stone-100 dark:bg-slate-800 text-sm text-slate-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Nomor WhatsApp / HP *</label>
+                        <input type="tel" id="loan-borrower-phone" required placeholder="08xxxxxxxxxx" class="w-full px-3.5 py-2.5 rounded-xl bg-stone-100 dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-terracotta-500">
+                    </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-xs font-semibold mb-1">Metode Pengambilan *</label>
@@ -971,8 +1067,8 @@
                         </div>
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold mb-1">Alamat Pengiriman / Domisili & No. HP *</label>
-                        <textarea id="loan-address" rows="2" required placeholder="Masukkan alamat lengkap dan nomor WhatsApp..." class="w-full px-3.5 py-2.5 rounded-xl bg-stone-100 dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-terracotta-500"></textarea>
+                        <label class="block text-xs font-semibold mb-1">Alamat Pengiriman Lengkap *</label>
+                        <textarea id="loan-address" rows="2" required placeholder="Alamat lengkap untuk pengiriman buku..." class="w-full px-3.5 py-2.5 rounded-xl bg-stone-100 dark:bg-slate-800 text-sm outline-none focus:ring-2 focus:ring-terracotta-500"></textarea>
                     </div>
                     <div class="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-300">
                         <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5"></i>
@@ -1176,7 +1272,9 @@
             CART: 'wordie_v4_cart',
             USER: 'wordie_v4_user',
             THEME: 'wordie_v4_theme',
-            ADMIN_SESSION: 'wordie_v4_admin_session'
+            ADMIN_SESSION: 'wordie_v4_admin_session',
+            BORROWER_USERS: 'wordie_v4_borrower_users',
+            BORROWER_SESSION: 'wordie_v4_borrower_session'
         };
 
         let books = [];
@@ -1184,6 +1282,9 @@
         let cart = [];
         let userProfile = {};
         let isAdminAuthenticated = false;
+        let borrowerUsers = [];
+        let currentBorrower = null;
+        let borrowerAuthMode = 'login';
         let homeSelectedCategory = 'Semua';
         let currentHeroSlide = 0;
         let heroAutoPlayTimer = null;
@@ -1200,6 +1301,10 @@
                 cart = JSON.parse(localStorage.getItem(KEYS.CART)) || [];
                 userProfile = JSON.parse(localStorage.getItem(KEYS.USER)) || { ...DEFAULT_USER };
                 isAdminAuthenticated = localStorage.getItem(KEYS.ADMIN_SESSION) === 'true';
+                borrowerUsers = JSON.parse(localStorage.getItem(KEYS.BORROWER_USERS)) || [];
+                const savedBorrowerEmail = localStorage.getItem(KEYS.BORROWER_SESSION);
+                currentBorrower = borrowerUsers.find(u => u.email === savedBorrowerEmail) || null;
+                if (currentBorrower) userProfile = { name: currentBorrower.name, email: currentBorrower.email, phone: currentBorrower.phone || '', address: currentBorrower.address || '' };
 
                 saveAllState();
 
@@ -1214,6 +1319,7 @@
                 updateGlobalBadges();
 
                 startHeroAutoPlay();
+                animatePageEntrance(document.getElementById('page-beranda'));
                 lucide.createIcons();
             } catch (err) {
                 console.error('Init error:', err);
@@ -1226,6 +1332,114 @@
             localStorage.setItem(KEYS.LOANS, JSON.stringify(loans));
             localStorage.setItem(KEYS.CART, JSON.stringify(cart));
             localStorage.setItem(KEYS.USER, JSON.stringify(userProfile));
+        }
+
+        let homeScrollRevealObserver = null;
+        let catalogScrollRevealObserver = null;
+
+        function setupHomeScrollReveal() {
+            const exploration = document.getElementById('home-exploration-section');
+            const about = document.getElementById('home-about-section');
+            if (!exploration || !about) return;
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+            if (homeScrollRevealObserver) homeScrollRevealObserver.disconnect();
+            homeScrollRevealObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-scroll-visible');
+                    } else {
+                        // Reset ketika keluar viewport agar animasi berjalan lagi saat scroll naik/turun.
+                        entry.target.classList.remove('is-scroll-visible');
+                    }
+                });
+            }, { threshold: 0.08, rootMargin: '0px 0px -7% 0px' });
+
+            const reveal = (element, delay = 0) => {
+                if (!element) return;
+                element.classList.add('scroll-reveal-item');
+                element.classList.remove('is-scroll-visible');
+                element.style.transitionDelay = `${delay}ms`;
+                homeScrollRevealObserver.observe(element);
+            };
+
+            // Tentang: label, judul, paragraf, info, dan tombol tampil berurutan.
+            const aboutText = about.children[0];
+            if (aboutText) Array.from(aboutText.children).forEach((child, index) => reveal(child, index * 130));
+            const aboutButton = about.querySelector('button');
+            if (aboutButton) reveal(aboutButton, 320);
+
+            // Dua banner promo muncul perlahan satu per satu ketika digulir.
+            const promoBanners = document.querySelectorAll('#page-beranda > section:nth-of-type(2) > div');
+            promoBanners.forEach((banner, index) => reveal(banner, index * 150));
+
+            // Eksplorasi: heading dan filter muncul dahulu, lalu buku per baris.
+            const explorationHeader = exploration.querySelector(':scope > div:first-child');
+            const categoryPills = document.getElementById('home-category-pills');
+            reveal(explorationHeader, 0);
+            reveal(categoryPills, 100);
+            observeHomeBookRows();
+        }
+
+        function observeHomeBookRows() {
+            if (!homeScrollRevealObserver) return;
+            const cards = Array.from(document.querySelectorAll('#home-books-grid > div'));
+            const columns = window.matchMedia('(min-width: 1024px)').matches ? 4 :
+                (window.matchMedia('(min-width: 640px)').matches ? 2 : 1);
+            cards.forEach((card, index) => {
+                card.classList.add('scroll-reveal-item');
+                card.classList.remove('is-scroll-visible');
+                const row = Math.floor(index / columns);
+                const column = index % columns;
+                card.style.transitionDelay = `${row * 100 + column * 75}ms`;
+                homeScrollRevealObserver.observe(card);
+            });
+        }
+
+        function setupCatalogScrollReveal() {
+            const grid = document.getElementById('katalog-books-grid');
+            if (!grid || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+            if (catalogScrollRevealObserver) catalogScrollRevealObserver.disconnect();
+            catalogScrollRevealObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-catalog-visible');
+                    } else {
+                        entry.target.classList.remove('is-catalog-visible');
+                    }
+                });
+            }, { threshold: 0.08, rootMargin: '0px 0px -6% 0px' });
+
+            Array.from(grid.children).forEach((card, index) => {
+                card.classList.add('catalog-scroll-reveal');
+                card.classList.remove('is-catalog-visible');
+                card.style.transitionDelay = `${(index % 4) * 90}ms`;
+                catalogScrollRevealObserver.observe(card);
+            });
+        }
+
+        function animatePageEntrance(page) {
+            if (!page || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+            const sections = Array.from(page.children).filter(el => !el.classList.contains('hidden') && !['home-exploration-section', 'home-about-section'].includes(el.id));
+            sections.forEach((el, index) => {
+                el.classList.remove('page-reveal-item');
+                void el.offsetWidth; // restart animation saat halaman dibuka kembali
+                el.style.animationDelay = `${Math.min(index * 90, 360)}ms`;
+                el.classList.add('page-reveal-item');
+            });
+
+            if (page.id === 'page-beranda') setupHomeScrollReveal();
+            if (page.id === 'page-katalog') setupCatalogScrollReveal();
+
+            const bookCards = page.querySelectorAll('#katalog-books-grid > div');
+            bookCards.forEach((card, index) => {
+                card.classList.remove('card-reveal-item');
+                void card.offsetWidth;
+                card.style.animationDelay = `${Math.min(index * 75, 600)}ms`;
+                card.classList.add('card-reveal-item');
+            });
         }
 
         function navigateTo(pageName) {
@@ -1268,6 +1482,9 @@
             if (pageName === 'admin') {
                 syncAdminView();
             }
+
+            // Animasi setiap kali halaman dibuka; isi grid buku ikut muncul bertahap.
+            animatePageEntrance(target);
 
             window.scrollTo({ top: 0, behavior: 'smooth' });
             lucide.createIcons();
@@ -1426,6 +1643,9 @@
             });
 
             renderBookCardGrid(filtered, 'home-books-grid');
+            if (document.getElementById('page-beranda') && !document.getElementById('page-beranda').classList.contains('hidden')) {
+                setupHomeScrollReveal();
+            }
         }
 
         function populateKatalogCategoryDropdown() {
@@ -1449,6 +1669,9 @@
             if (sort === 'stock-desc') filtered.sort((a, b) => b.stock - a.stock);
 
             renderBookCardGrid(filtered, 'katalog-books-grid');
+            if (!document.getElementById('page-katalog')?.classList.contains('hidden')) {
+                setupCatalogScrollReveal();
+            }
         }
 
         function renderBookCardGrid(bookList, containerId) {
@@ -1550,6 +1773,11 @@
 
         // KERANJANG & CHECKOUT PEMINJAM
         function addToCart(bookId) {
+            if (!currentBorrower) {
+                showToast('Login atau daftar dahulu untuk meminjam buku.', 'error');
+                navigateTo('akun');
+                return;
+            }
             const book = books.find(b => b.id === bookId);
             if (!book || book.stock <= 0) {
                 showToast('Stok buku ini sedang habis.', 'error');
@@ -1593,8 +1821,15 @@
         }
 
         function openCartDrawer() {
-            document.getElementById('loan-borrower-name').value = userProfile.name || '';
-            document.getElementById('loan-address').value = userProfile.address || '';
+            if (!currentBorrower) {
+                showToast('Silakan login atau daftar sebagai peminjam sebelum mengajukan pinjaman.', 'error');
+                navigateTo('akun');
+                return;
+            }
+            document.getElementById('loan-borrower-name').value = currentBorrower.name || '';
+            document.getElementById('loan-borrower-email').value = currentBorrower.email || '';
+            document.getElementById('loan-borrower-phone').value = currentBorrower.phone || '';
+            document.getElementById('loan-address').value = currentBorrower.address || '';
             renderDrawerCart();
 
             const drawer = document.getElementById('modal-cart-drawer');
@@ -1642,12 +1877,20 @@
 
         function processLoanCheckout(e) {
             e.preventDefault();
+            if (!currentBorrower) { showToast('Silakan login terlebih dahulu.', 'error'); navigateTo('akun'); return; }
             if (cart.length === 0) return;
 
-            const borrowerName = document.getElementById('loan-borrower-name').value.trim();
+            const borrowerName = currentBorrower.name;
+            const borrowerEmail = currentBorrower.email;
+            const borrowerPhone = document.getElementById('loan-borrower-phone').value.trim();
             const method = document.getElementById('loan-method').value;
             const duration = document.getElementById('loan-duration').value;
             const address = document.getElementById('loan-address').value.trim();
+            if (!borrowerPhone || !address) { showToast('Nomor WhatsApp dan alamat lengkap wajib diisi.', 'error'); return; }
+            currentBorrower.phone = borrowerPhone;
+            currentBorrower.address = address;
+            localStorage.setItem(KEYS.BORROWER_USERS, JSON.stringify(borrowerUsers));
+            userProfile = { name: currentBorrower.name, email: currentBorrower.email, phone: borrowerPhone, address };
 
             for (const item of cart) {
                 const book = books.find(b => b.id === item.bookId);
@@ -1665,6 +1908,8 @@
             const newLoan = {
                 id: 'WRD-' + Math.floor(1000 + Math.random() * 9000),
                 borrowerName,
+                borrowerEmail,
+                borrowerPhone,
                 method,
                 address,
                 duration,
@@ -1686,17 +1931,86 @@
             showToast(`Peminjaman ${newLoan.id} berhasil dibuat!`, 'success');
         }
 
+        // AUTENTIKASI AKUN PEMINJAM (tersimpan pada browser/perangkat ini)
+        function syncBorrowerView() {
+            const authPanel = document.getElementById('borrower-auth-panel');
+            const dashboard = document.getElementById('borrower-dashboard');
+            if (!authPanel || !dashboard) return;
+            authPanel.classList.toggle('hidden', !!currentBorrower);
+            dashboard.classList.toggle('hidden', !currentBorrower);
+            if (currentBorrower) renderUserProfile();
+            renderLoansTracking();
+            lucide.createIcons();
+        }
+
+        function toggleBorrowerAuthMode() {
+            borrowerAuthMode = borrowerAuthMode === 'login' ? 'register' : 'login';
+            const registering = borrowerAuthMode === 'register';
+            document.getElementById('borrower-auth-title').textContent = registering ? 'Daftar Akun Peminjam' : 'Login Peminjam';
+            document.getElementById('borrower-auth-subtitle').textContent = registering ? 'Buat akun untuk mulai meminjam dan melacak buku.' : 'Masuk untuk melihat akun dan riwayat peminjamanmu.';
+            document.getElementById('borrower-name-field').classList.toggle('hidden', !registering);
+            document.getElementById('borrower-auth-name').required = registering;
+            document.getElementById('borrower-auth-phone').required = registering;
+            document.getElementById('borrower-auth-address').required = registering;
+            document.getElementById('borrower-auth-password').autocomplete = registering ? 'new-password' : 'current-password';
+            document.getElementById('borrower-auth-submit').textContent = registering ? 'Daftar Akun' : 'Masuk';
+            document.getElementById('borrower-auth-switch-label').textContent = registering ? 'Sudah punya akun?' : 'Belum punya akun?';
+            document.getElementById('borrower-auth-switch').textContent = registering ? 'Login' : 'Daftar sekarang';
+        }
+
+        function handleBorrowerAuth(e) {
+            e.preventDefault();
+            const email = document.getElementById('borrower-auth-email').value.trim().toLowerCase();
+            const password = document.getElementById('borrower-auth-password').value;
+            if (borrowerAuthMode === 'register') {
+                const name = document.getElementById('borrower-auth-name').value.trim();
+                const phone = document.getElementById('borrower-auth-phone').value.trim();
+                const address = document.getElementById('borrower-auth-address').value.trim();
+                if (!name || !phone || !address) { showToast('Nama, nomor WhatsApp, dan alamat wajib diisi.', 'error'); return; }
+                if (borrowerUsers.some(u => u.email === email)) { showToast('Email sudah terdaftar. Silakan login.', 'error'); return; }
+                const account = { name, email, password, phone, address };
+                borrowerUsers.push(account);
+                currentBorrower = account;
+                localStorage.setItem(KEYS.BORROWER_USERS, JSON.stringify(borrowerUsers));
+                localStorage.setItem(KEYS.BORROWER_SESSION, email);
+                userProfile = { name, email, phone, address };
+                saveAllState();
+                borrowerAuthMode = 'login';
+                document.getElementById('borrower-auth-form').reset();
+                syncBorrowerView();
+                showToast('Pendaftaran berhasil! Data profil tersimpan dan siap dipakai untuk formulir peminjaman.', 'success');
+                return;
+            }
+            const account = borrowerUsers.find(u => u.email === email && u.password === password);
+            if (!account) { showToast('Email atau kata sandi salah.', 'error'); return; }
+            currentBorrower = account;
+            localStorage.setItem(KEYS.BORROWER_SESSION, email);
+            userProfile = { name: account.name, email: account.email, phone: account.phone || '', address: account.address || '' };
+            saveAllState();
+            syncBorrowerView();
+            showToast('Login peminjam berhasil.', 'success');
+        }
+
+        function handleBorrowerLogout() {
+            currentBorrower = null;
+            localStorage.removeItem(KEYS.BORROWER_SESSION);
+            cart = [];
+            saveAllState();
+            updateGlobalBadges();
+            syncBorrowerView();
+            showToast('Kamu berhasil logout.', 'info');
+        }
+
         // PROFIL & PELACAKAN AKUN PEMINJAM
         function renderUserProfile() {
-            document.getElementById('display-user-name').textContent = userProfile.name;
-            document.getElementById('display-user-email').textContent = `${userProfile.email} • ${userProfile.address}`;
-
-            const initials = userProfile.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'WR';
+            const profile = currentBorrower || userProfile;
+            document.getElementById('display-user-name').textContent = profile.name || '';
+            document.getElementById('display-user-email').textContent = `${profile.email || ''} • ${profile.address || ''}`;
+            const initials = (profile.name || 'WR').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'WR';
             document.getElementById('user-avatar-initials').textContent = initials;
-
-            document.getElementById('input-profile-name').value = userProfile.name;
-            document.getElementById('input-profile-email').value = userProfile.email;
-            document.getElementById('input-profile-address').value = userProfile.address;
+            document.getElementById('input-profile-name').value = profile.name || '';
+            document.getElementById('input-profile-email').value = profile.email || '';
+            document.getElementById('input-profile-address').value = profile.address || '';
         }
 
         function toggleEditProfileForm() {
@@ -1708,7 +2022,16 @@
             userProfile.name = document.getElementById('input-profile-name').value.trim();
             userProfile.email = document.getElementById('input-profile-email').value.trim();
             userProfile.address = document.getElementById('input-profile-address').value.trim();
-
+            if (currentBorrower) {
+                const oldEmail = currentBorrower.email;
+                currentBorrower.name = userProfile.name;
+                currentBorrower.email = userProfile.email.toLowerCase();
+                currentBorrower.address = userProfile.address;
+                localStorage.setItem(KEYS.BORROWER_SESSION, currentBorrower.email);
+                // Jaga keterkaitan riwayat jika email akun diperbarui.
+                loans.forEach(loan => { if (loan.borrowerEmail === oldEmail) loan.borrowerEmail = currentBorrower.email; });
+                localStorage.setItem(KEYS.BORROWER_USERS, JSON.stringify(borrowerUsers));
+            }
             saveAllState();
             renderUserProfile();
             toggleEditProfileForm();
@@ -1762,7 +2085,10 @@
             const container = document.getElementById('loans-tracking-list');
             if (!container) return;
 
-            if (loans.length === 0) {
+            const myLoans = currentBorrower
+                ? loans.filter(loan => loan.borrowerEmail === currentBorrower.email)
+                : [];
+            if (!currentBorrower || myLoans.length === 0) {
                 container.innerHTML = `
                     <div class="py-12 text-center bg-white dark:bg-slatebrand-900 rounded-3xl border border-stone-200 dark:border-slate-800">
                         <p class="font-display font-bold text-base">Belum ada riwayat peminjaman</p>
@@ -1772,7 +2098,7 @@
                 return;
             }
 
-            container.innerHTML = loans.map(loan => {
+            container.innerHTML = myLoans.map(loan => {
                 const stepIdx = LOAN_STEPS.indexOf(loan.status);
                 const isDone = loan.status === 'Dikembalikan';
                 const btnText = {
@@ -1956,6 +2282,7 @@
                             </div>
                             <p class="text-sm font-bold">Peminjam: ${loan.borrowerName} <span class="font-normal text-xs text-slate-500">(${loan.method})</span></p>
                             <p class="text-xs text-slate-500">Buku: ${loan.items.map(i => `${i.title} (x${i.qty})`).join(', ')}</p>
+                            <p class="text-[11px] text-slate-400">Email: ${loan.borrowerEmail || '-'} • WhatsApp: ${loan.borrowerPhone || '-'}</p>
                             <p class="text-[11px] text-slate-400">Alamat: ${loan.address}</p>
                         </div>
                         <div class="flex items-center gap-2 self-end md:self-center flex-wrap justify-end">
@@ -2180,7 +2507,8 @@
                 entries.forEach((entry) => {
                     if (entry.isIntersecting) {
                         entry.target.classList.add('is-visible');
-                        profilScrollObserver.unobserve(entry.target);
+                    } else {
+                        entry.target.classList.remove('is-visible');
                     }
                 });
             }, {
